@@ -212,7 +212,7 @@ function setFee(v){db.doc('evs/'+evOpen).update({fee:+v||0})}
 function setPaid(id,v){var e=EV.filter(function(x){return x.id==evOpen})[0],pd=Object.assign({},e.paid||{});if(v==='')delete pd[id];else pd[id]=+v;e.paid=pd;db.doc('evs/'+evOpen).update({paid:pd});render()}
 function addEv(){var n=document.getElementById('en').value.trim();if(!n)return;db.doc('evs/e'+Date.now()).set({name:n,date:document.getElementById('ed').value||today(),ids:[],fee:0,paid:{}})}
 function setEv(id,on){var e=EV.filter(function(x){return x.id==evOpen})[0],p=(e.ids||[]).filter(function(x){return x!=id});if(on)p.push(id);e.ids=p;db.doc('evs/'+evOpen).update({ids:p});render()}
-function delEv(){if(!evDel){evDel=true;render();return}evDel=false;db.doc('evs/'+evOpen).delete();evOpen=null}
+function delEv(){if(!evDel){evDel=true;render();return}evDel=false;db.doc('trips/'+evOpen).delete();db.doc('evs/'+evOpen).delete();evOpen=null}
 var KG=[],rview=false,rconf=false,rmap=null,rmsg='',rbusy=false,roll={};
 function vRoll(){if(locked())return pinGate()+'<button class="btn s" onclick="rview=false;render()">رجوع</button>';if(!rmap){rmap={};CL.forEach(function(n,i){rmap[i]=i<11?i+1:i})}
  var cnt=CL.map(function(n,i){return K.filter(function(k){return k.cls==i}).length});
@@ -506,7 +506,7 @@ function ordOk(id){var o=ORD.filter(function(x){return x.id==id})[0];if(!o||o.st
  Promise.all([db.doc('pts/'+k.id).set({log:l}),db.doc('shop/'+it.id).update({qty:Math.max(0,(+it.qty||0)-1)}),db.doc('orders/'+id).update({status:'approved',by:me.name||'',at:Date.now()})]).then(function(){syncKid(k.id);logA('موافقة طلب شراء',k.name+' – '+it.name)}).catch(function(){shopMsg='تعذرت الموافقة، راجعي الصلاحيات';render()});render()}
 function ordNo(id){db.doc('orders/'+id).update({status:'rejected',by:me.name||'',at:Date.now()})}
 function rndPw(){var a=new Uint32Array(1);crypto.getRandomValues(a);return String(100000+a[0]%900000)}
-async function mkAcct(k){var base='k'+k.id,sf=['','b','c','d'],uid=null,u=null,pw=rndPw();
+async function mkAcct(k){var base='k'+k.id,sf=['','b','c','d','e','f','g','h','j','m','n','p','q','r','s','t'],uid=null,u=null,pw=rndPw();
  for(var i=0;i<sf.length&&!uid;i++){u=base+sf[i];try{uid=await window._api.createKid(u,pw)}catch(e){if(String(e&&e.code)!='auth/email-already-in-use')throw e}}
  if(!uid)throw new Error('تعذر إيجاد اسم مستخدم متاح');
  await db.doc('kidaccts/'+uid).set({kid:k.id,user:u});await db.doc('kidpw/'+k.id).set({user:u,pw:pw,uid:uid});HASACC[k.id]=1;await db.doc('portal/'+k.id).set(portalDoc(k));return u}
@@ -638,9 +638,10 @@ loadUI();
  sub('prog',function(sn){PG={};PGG={};sn.docs.forEach(function(d){PG[d.id]=d.data().h||{};PGG[d.id]=d.data().g||{}})});
  sub('satt',function(sn){SA={};sn.docs.forEach(function(d){SA[d.id]=d.data().ids||[]})});
  sub('pts',function(sn){PT={};sn.docs.forEach(function(d){PT[d.id]=d.data().log||[]})});
- sub('evs',function(sn){EV=sn.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o})});
- sub('cfg',function(sn){cfg={};roll={};sn.docs.forEach(function(d){if(d.id=='main')cfg=d.data();if(d.id=='roll')roll=d.data()})});  sub('exams',function(sn){EXM={};sn.docs.forEach(function(d){EXM[d.id]=d.data()})});  sub('trips',function(sn){TRP={};sn.docs.forEach(function(d){TRP[d.id]=d.data()})});  sub('tripreq',function(sn){TRQ=sn.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o})});  sub('pub',function(sn){PUB={};sn.docs.forEach(function(d){PUB[d.id]=d.data()})});
+ sub('evs',function(sn){EV=sn.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o});Object.keys(TRP).forEach(function(i){if(!EV.some(function(e){return e.id==i}))db.doc('trips/'+i).delete()})});
+ sub('cfg',function(sn){cfg={};roll={};sn.docs.forEach(function(d){if(d.id=='main')cfg=d.data();if(d.id=='roll')roll=d.data()})});  sub('exams',function(sn){EXM={};sn.docs.forEach(function(d){EXM[d.id]=d.data()})});  sub('trips',function(sn){TRP={};sn.docs.forEach(function(d){TRP[d.id]=d.data()});if(EV.length)Object.keys(TRP).forEach(function(i){if(!EV.some(function(e){return e.id==i}))db.doc('trips/'+i).delete()})});  sub('tripreq',function(sn){TRQ=sn.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o})});  sub('pub',function(sn){PUB={};sn.docs.forEach(function(d){PUB[d.id]=d.data()})});
  render();
+ setTimeout(function(){try{if(role=='admin'&&localStorage.getItem('portalSync5')!='1'&&Object.keys(HASACC).length){localStorage.setItem('portalSync5','1');kaSyncAll()}}catch(e){}},6000);
 })();
 </script>
 </body>
